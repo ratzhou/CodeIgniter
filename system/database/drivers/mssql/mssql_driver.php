@@ -109,8 +109,8 @@ class CI_DB_mssql_driver extends CI_DB {
 	public function db_connect($persistent = FALSE)
 	{
 		$this->conn_id = ($persistent)
-				? mssql_pconnect($this->hostname, $this->username, $this->password)
-				: mssql_connect($this->hostname, $this->username, $this->password);
+				? odbc_pconnect($this->dsn, $this->username, $this->password)
+				: odbc_connect($this->dsn, $this->username, $this->password);
 
 		if ( ! $this->conn_id)
 		{
@@ -153,9 +153,7 @@ class CI_DB_mssql_driver extends CI_DB {
 			$database = $this->database;
 		}
 
-		// Note: Escaping is required in the event that the DB name
-		// contains reserved characters.
-		if (mssql_select_db('['.$database.']', $this->conn_id))
+		if ($this->_execute('USE '.$this->escape_identifiers($database)))
 		{
 			$this->database = $database;
 			return TRUE;
@@ -174,7 +172,7 @@ class CI_DB_mssql_driver extends CI_DB {
 	 */
 	protected function _execute($sql)
 	{
-		return mssql_query($sql, $this->conn_id);
+		return odbc_exec($this->conn_id, $sql);
 	}
 
 	// --------------------------------------------------------------------
@@ -246,7 +244,7 @@ class CI_DB_mssql_driver extends CI_DB {
 	 */
 	public function affected_rows()
 	{
-		return mssql_rows_affected($this->conn_id);
+		return odbc_num_rows($this->result_id);
 	}
 
 	// --------------------------------------------------------------------
@@ -291,7 +289,7 @@ class CI_DB_mssql_driver extends CI_DB {
 	 */
 	protected function _version()
 	{
-		return 'SELECT @@VERSION AS ver';
+		return "SELECT SERVERPROPERTY('productversion') AS ver";
 	}
 
 	// --------------------------------------------------------------------
@@ -383,7 +381,7 @@ class CI_DB_mssql_driver extends CI_DB {
 	{
 		$query = $this->query('SELECT @@ERROR AS code');
 		$query = $query->row();
-		return array('code' => $query->code, 'message' => mssql_get_last_message());
+		return array('code' => $query->code, 'message' => odbc_errormsg($this->conn_id));
 	}
 
 	// --------------------------------------------------------------------
@@ -525,7 +523,7 @@ class CI_DB_mssql_driver extends CI_DB {
 	 */
 	protected function _close()
 	{
-		mssql_close($this->conn_id);
+		odbc_close($this->conn_id);
 	}
 
 }
